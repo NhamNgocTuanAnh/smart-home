@@ -61,9 +61,7 @@ cpdef smooth_emotions():
                 #cv2.imwrite(path_face_save, gray_temp)
 
                 predicted_emotion = str(emotions[label_temp])
-                d =  Video_Process()
-                d.smo_emotions()
-                #print(predicted_emotion)
+                print(predicted_emotion)
 		
         except queue.Empty:
             logging.warning("Empty memory!")
