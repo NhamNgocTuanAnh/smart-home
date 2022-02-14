@@ -83,7 +83,7 @@ cpdef show():
         int count = 0
         numpy.uint32_t x, y, w, h
         numpy.ndarray frame, gray, roi
-        float time_start
+        float time_start = 0
         bint time_checker = True
 
     cap = cv2.VideoCapture("videos/democlassroom.mp4")
