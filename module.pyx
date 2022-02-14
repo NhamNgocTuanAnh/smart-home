@@ -8,8 +8,7 @@ UTC = pytz.timezone('UTC')  # utc
 from datetime import datetime as dt
 now = dt.now(pytz.timezone('Asia/Ho_Chi_Minh'))
 from libc.stdio cimport *
-cimport numpy
-cimport cython
+cimport numpy, cython
 from libc.stdint cimport (
   uint8_t, uint16_t, uint32_t, uint64_t,
   int8_t, int16_t, int32_t, int64_t,
@@ -18,6 +17,7 @@ from libc.stdint cimport (
 #import pyshine as ps
 import logging
 
+cimport cqueue
 
 from keras.models import model_from_json
 from keras.preprocessing.image import img_to_array
@@ -29,15 +29,7 @@ from multiprocessing import Process, Manager, cpu_count, set_start_method
 input_image_time_buffer = queue.Queue(550)
 
 
-#EMOTIONS = numpy.array(["angry", "disgust", "scared", "happy", "sad", "surprised", "neutral", "background"])
-cdef class Video_Process:
-    cdef:
-        int bar
-        
-    def __init__(self):
-        self.bar = 4
-        self.input_image = queue.Queue(550)
-        
+#EMOTIONS = numpy.array(["angry", "disgust", "scared", "happy", "sad", "surprised", "neutral", "background"])     
         
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -69,7 +61,9 @@ cpdef smooth_emotions():
                 #cv2.imwrite(path_face_save, gray_temp)
 
                 predicted_emotion = str(emotions[label_temp])
-                print(predicted_emotion)
+                d =  Video_Process()
+                d.smo_emotions()
+                #print(predicted_emotion)
 		
         except queue.Empty:
             logging.warning("Empty memory!")
