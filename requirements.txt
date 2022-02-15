@@ -1,5 +1,4 @@
+pyFirmata
 numpy
 opencv-python
-keras
---upgrade tensorflow
 Cython
