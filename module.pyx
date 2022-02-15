@@ -1,4 +1,5 @@
-
+# https://askubuntu.com/questions/1056314/uploading-code-to-arduino-gives-me-the-error-avrdude-ser-open-cant-open-d
+# https://cachdung.com/blog/tu-lam-mot-robot-de-thuong.html
 import numpy
 import cv2,os
 from decimal import Decimal
@@ -14,19 +15,14 @@ from libc.stdint cimport (
   int8_t, int16_t, int32_t, int64_t,
   uintptr_t
 )
-#import pyshine as ps
 import logging
-
-cimport cqueue
-
-from keras.models import model_from_json
-from keras.preprocessing.image import img_to_array
 import threading,queue
 import multiprocessing
+import pyfirmata
 
 from multiprocessing import Process, Manager, cpu_count, set_start_method
 
-input_image_time_buffer = queue.Queue(550)
+input_image_time_buffer = queue.Queue()
 
 
 #EMOTIONS = numpy.array(["angry", "disgust", "scared", "happy", "sad", "surprised", "neutral", "background"])     
@@ -37,36 +33,46 @@ cpdef smooth_emotions():
     #global EMOTIONS
     
     # load model facial_expression
-    model_facial_expression = model_from_json(open("model/fer.json", "r").read())
+    #model_facial_expression = model_from_json(open("model/fer.json", "r").read())
     # load weights facial_expression
-    model_facial_expression.load_weights('model/fer.h5')
+    #model_facial_expression.load_weights('model/fer.h5')
     
     emotions = numpy.array(['Angry', 'Background', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise'])
     
+    
     cdef :
-        numpy.ndarray roi, gray_temp
+        numpy.ndarray roi, gray_temp,frame1,frame2
         str path_face_save
         int label_temp = 0
+        int count = 0
     
     while True:
         try:
-            (gray_temp, current_time) = input_image_time_buffer.get(timeout=1)
-            roi = numpy.expand_dims(img_to_array(gray_temp.astype("float") / 255.0), axis=0)
-     
-            preds = model_facial_expression.predict(roi)[0]
-            if preds.argmax() < 7:
-                label_temp = int(preds.argmax())
+            (gray_temp, current_time) = input_image_time_buffer.get()
+            #blink_led()
+
+            #roi = numpy.expand_dims(img_to_array(gray_temp.astype("float") / 255.0), axis=0)
+
+            #preds = model_facial_expression.predict(roi)[0]
+            #if preds.argmax() < 7:
+                #label_temp = int(preds.argmax())
                 #path_face_save = ' ' .join(["face_database/", str(EMOTIONS[label_temp]), "/", str(int(current_time)), '_' ,".jpg"])
                 #str("face_database/"+str(EMOTIONS[label_temp])+"/"+str(EMOTIONS[label_temp])+'_'+ str(int(current_time))+"_"+str(number_face) + ".jpg")
-                #cv2.imwrite(path_face_save, gray_temp)
-
-                predicted_emotion = str(emotions[label_temp])
-                print(predicted_emotion)
+            
 		
         except queue.Empty:
             logging.warning("Empty memory!")
             pass
-
+            
+def blink_led()->int:
+    print("find face")
+    board = pyfirmata.Arduino('/dev/ttyACM0')
+    board.digital[13].write(1)
+    time.sleep(0.1)
+    board.digital[13].write(0)
+    time.sleep(0.1)
+    return 1;
+    
 def get_best_images(input_frames:[])-> numpy.array([]):
     blur_threshold=int(100)
     input_frames = sorted(input_frames, key=lambda img : cv2.Laplacian(img[0], cv2.CV_64F).var(), reverse=True)
@@ -81,12 +87,17 @@ cpdef show():
         bint ret = True
         int i
         int count = 0
+        int begin = 0
         numpy.uint32_t x, y, w, h
-        numpy.ndarray frame, gray, roi
+        numpy.ndarray frame, gray, roi, frame1, frame2
         float time_start = 0
         bint time_checker = True
+        bint moving = False
 
-    cap = cv2.VideoCapture("videos/democlassroom.mp4")
+    cap = cv2.VideoCapture("videos/test.mp4")
+    _, frame1 = cap.read()
+    _, frame2 = cap.read()
+    
     print("Width: %d, Height: %d, FPS: %d" % (cap.get(3), cap.get(4), cap.get(5)))
     input_frames = []
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")    
@@ -94,14 +105,37 @@ cpdef show():
         try:
             ret, frame = cap.read()
 
+				
             if (not (ret is  True)):                
                 logging.warning("Something wrong!")
                 break
-
+            #if begin == 0:
+            difference = cv2.absdiff(frame1,frame2)
+            gray_image_diff = cv2.cvtColor(difference,cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray_image_diff,(25,25),0)
+            ret,thresh = cv2.threshold(blur,18,255,cv2.THRESH_BINARY)
+            dilated = cv2.dilate(thresh,None,iterations=3)
+            contours, _ =cv2.findContours(dilated,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+            if contours is None:
+                print('No eyes found!')
+            else:
+                #cnts = sorted(contours, key=lambda x: cv2.contourArea(x), reverse=True)
+                for contour in contours:
+                    if cv2.contourArea(contour)>200:
+                        logging.warning("Found the human!")
+                        continue
+                        
+            #cv2.imshow("Detect",frame1)
+            frame1=frame2
+            _,frame2 = cap.read()
+  			
+  			
+  				
             count += 1
 
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             input_frames.append(frame_gray)
+            
             #print(type(input_frames))
             if count%5==0:
                gray_img = get_best_images(input_frames)
@@ -119,8 +153,13 @@ cpdef show():
                    input_image_time_buffer.put((roi,time_start), timeout=1)
                    
                input_frames.clear()   
-               count = int(0) 
-           
+               count = int(0)
+               
+               
+            #cv2.imshow("Image", frame)
+            #if cv2.waitKey(1) & 0xFF == ord('q'):
+                #break
+
         except queue.Full:
             logging.warning("full memory!")
             pass
