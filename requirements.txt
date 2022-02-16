@@ -1,4 +1,9 @@
-pyFirmata
-numpy
-opencv-python
-Cython
+Cython==0.29.24
+keras==2.7.0
+module==0.0.4
+numpy==1.17.4
+opencv_python==4.5.4.60
+psutil==5.8.0
+pyFirmata==1.1.0
+pytz==2019.3
+quick_queue==1.0.7
