@@ -97,7 +97,7 @@ cpdef int show(path:str):
         bint time_checker = True
         bint moving = False
 
-    cap = cv2.VideoCapture(path)
+    cap = cv2.VideoCapture(0)
     _, frame1 = cap.read()
     _, frame2 = cap.read()
     
