@@ -97,13 +97,13 @@ cpdef int show(path:str):
         bint time_checker = True
         bint moving = False
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(path)
     _, frame1 = cap.read()
     _, frame2 = cap.read()
     
     print("Width: %d, Height: %d, FPS: %d" % (cap.get(3), cap.get(4), cap.get(5)))
     input_frames = []
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")    
+    face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")    
     while True :
         try:
             ret, frame = cap.read()
